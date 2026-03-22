@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Math Gauntlet — FlagVault CTF</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>"/>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="#" class="nav-brand">
+    <span class="bracket">[</span><span class="brand-flag">FLAG</span>VAULT<span class="bracket">]</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">Challenges</a></li>
+    <li><a href="#" class="active">Math Gauntlet</a></li>
+    <li><a href="#">Scoreboard</a></li>
+  </ul>
+  <div class="nav-status"><div class="status-dot"></div>SERVER ONLINE</div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- Header -->
+  <header class="page-header" data-index="P1">
+    <div class="page-eyebrow">SCRIPTING / PWNABLE · CHALLENGE #P1</div>
+    <h1 class="page-title"><span class="hl2">Math</span> <span class="hl">Gauntlet</span></h1>
+    <p class="page-desc">
+      The server sends you a math problem every round for 100 rounds.<br/>
+      Solve all 100 correctly within the timeout — you cannot do this by hand.
+    </p>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-box"><span class="stat-val">200</span><span class="stat-label">Points</span></div>
+    <div class="stat-box"><span class="stat-val amber">Easy</span><span class="stat-label">Difficulty</span></div>
+    <div class="stat-box"><span class="stat-val red">156</span><span class="stat-label">Solves</span></div>
+    <div class="stat-box"><span class="stat-val">Scripting</span><span class="stat-label">Category</span></div>
+  </div>
+
+  <!-- Connection info bar -->
+  <div class="conn-info-bar">
+    <span class="cib-icon">🖥️</span>
+    <span class="cib-label">Server:</span>
+    <code class="cib-cmd">nc challenge.flagvault.local 5555</code>
+    <span class="cib-sep">·</span>
+    <span class="cib-label">Timeout per round:</span>
+    <code class="cib-val">3 seconds</code>
+    <span class="cib-sep">·</span>
+    <span class="cib-label">Rounds:</span>
+    <code class="cib-val">100</code>
+  </div>
+
+  <div class="mg-layout">
+
+    <!-- ══════ LEFT: Simulator + Script editor ══════ -->
+    <div class="mg-left">
+
+      <!-- ── Server Simulator ── -->
+      <div class="sec-divider">
+        <h3>Server Simulator <span class="tag tag-green">Try It Here</span></h3>
+      </div>
+      <div class="sim-card">
+        <div class="sim-bar">
+          <span class="sim-dot sim-r"></span>
+          <span class="sim-dot sim-y"></span>
+          <span class="sim-dot sim-g"></span>
+          <span class="sim-title" id="sim-title">challenge.flagvault.local:5555 — idle</span>
+          <div class="sim-round-badge" id="sim-round-badge">
+            <span id="sim-round">0</span><span class="srb-slash">/</span><span class="srb-total">100</span>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="sim-progress-wrap">
+          <div class="sim-progress-bar" id="sim-progress-bar" style="width:0%"></div>
+        </div>
+
+        <!-- Terminal output -->
+        <div class="sim-terminal" id="sim-terminal">
+          <div class="st-line st-dim">Connect and run your solver to begin…</div>
+        </div>
+
+        <!-- Input row -->
+        <div class="sim-input-row" id="sim-input-row">
+          <span class="sir-prompt" id="sir-prompt">Answer:</span>
+          <input class="sir-input" id="sir-input" type="number"
+                 placeholder="type answer here…"
+                 autocomplete="off"
+                 disabled/>
+          <button class="sir-send" id="sir-send" onclick="manualAnswer()" disabled>↵ Send</button>
+        </div>
+
+        <!-- Control buttons -->
+        <div class="sim-controls">
+          <button class="btn btn-primary sim-btn" id="btn-connect" onclick="startSimulator('manual')">
+            ▶ Manual Mode
+          </button>
+          <button class="btn sim-btn sim-btn-auto" id="btn-auto" onclick="startSimulator('auto')">
+            ⚡ Auto-Solve (simulate script)
+          </button>
+          <button class="sim-reset-btn" onclick="resetSimulator()">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- ── Script editor / guide ── -->
+      <div class="sec-divider"><h3>Write Your Solver Script</h3></div>
+
+      <!-- Language tabs -->
+      <div class="script-tabs">
+        <button class="sc-tab active" onclick="switchScriptTab('pwntools')">🐍 pwntools</button>
+        <button class="sc-tab" onclick="switchScriptTab('socket')">🐍 raw socket</button>
+        <button class="sc-tab" onclick="switchScriptTab('bash')">🐚 bash / nc</button>
+      </div>
+
+      <!-- pwntools -->
+      <div class="script-panel active" id="panel-pwntools">
+        <div class="sp-label">// solution_pwntools.py — recommended approach</div>
+        <div class="sp-code" id="code-pwntools">
+          <pre class="sp-pre"><span class="sc-kw">from</span> pwn <span class="sc-kw">import</span> *
+
+HOST = <span class="sc-str">"challenge.flagvault.local"</span>
+PORT = <span class="sc-num">5555</span>
+
+io = remote(HOST, PORT)
+
+<span class="sc-comment"># Read the welcome banner</span>
+io.recvuntil(<span class="sc-str">b"Ready? GO!\n"</span>)
+
+<span class="sc-kw">for</span> i <span class="sc-kw">in</span> range(<span class="sc-num">100</span>):
+    <span class="sc-comment"># Receive the problem line: "Round X/100: A op B = ?"</span>
+    line = io.recvline().decode().strip()
+    print(line)
+
+    <span class="sc-comment"># Extract the expression (between ": " and " = ?")</span>
+    expr = line.split(<span class="sc-str">": "</span>)[<span class="sc-num">1</span>].replace(<span class="sc-str">" = ?"</span>, <span class="sc-str">""</span>)
+
+    <span class="sc-comment"># Evaluate it (safe: only +, -, *, // with integers)</span>
+    answer = eval(expr)
+    print(<span class="sc-str">f"  → {answer}"</span>)
+
+    io.sendline(str(answer).encode())
+
+    <span class="sc-comment"># Read the "Correct!" confirmation</span>
+    feedback = io.recvline().decode().strip()
+    print(feedback)
+
+<span class="sc-comment"># All 100 done — read the flag</span>
+flag_line = io.recvall().decode()
+print(flag_line)</pre>
+        </div>
+        <div class="sp-run-row">
+          <code class="sp-runcmd">python3 solution_pwntools.py</code>
+          <span class="sp-note">requires: <code>pip install pwntools</code></span>
+        </div>
+      </div>
+
+      <!-- raw socket -->
+      <div class="script-panel hidden" id="panel-socket">
+        <div class="sp-label">// solution_socket.py — no extra dependencies</div>
+        <div class="sp-code">
+          <pre class="sp-pre"><span class="sc-kw">import</span> socket
+
+HOST = <span class="sc-str">"challenge.flagvault.local"</span>
+PORT = <span class="sc-num">5555</span>
+
+<span class="sc-kw">def</span> <span class="sc-fn">recv_line</span>(s):
+    data = <span class="sc-str">b""</span>
+    <span class="sc-kw">while</span> <span class="sc-kw">not</span> data.endswith(<span class="sc-str">b"\n"</span>):
+        chunk = s.recv(<span class="sc-num">1</span>)
+        <span class="sc-kw">if not</span> chunk:
+            <span class="sc-kw">break</span>
+        data += chunk
+    <span class="sc-kw">return</span> data.decode().strip()
+
+<span class="sc-kw">with</span> socket.socket() <span class="sc-kw">as</span> s:
+    s.connect((HOST, PORT))
+    s.settimeout(<span class="sc-num">10</span>)
+
+    <span class="sc-comment"># Drain the banner</span>
+    banner = recv_line(s)
+    <span class="sc-kw">while</span> <span class="sc-str">"Ready? GO!"</span> <span class="sc-kw">not in</span> banner:
+        print(banner)
+        banner = recv_line(s)
+    print(banner)
+
+    <span class="sc-kw">for</span> _ <span class="sc-kw">in</span> range(<span class="sc-num">100</span>):
+        line = recv_line(s)
+        print(line)
+        expr = line.split(<span class="sc-str">": "</span>)[<span class="sc-num">1</span>].replace(<span class="sc-str">" = ?"</span>, <span class="sc-str">""</span>)
+        ans  = eval(expr)
+        s.sendall((str(ans) + <span class="sc-str">"\n"</span>).encode())
+        print(recv_line(s))
+
+    <span class="sc-comment"># Receive flag</span>
+    <span class="sc-kw">try</span>:
+        <span class="sc-kw">while True</span>:
+            print(recv_line(s))
+    <span class="sc-kw">except</span>:
+        <span class="sc-kw">pass</span></pre>
+        </div>
+        <div class="sp-run-row">
+          <code class="sp-runcmd">python3 solution_socket.py</code>
+          <span class="sp-note">stdlib only — no pip needed</span>
+        </div>
+      </div>
+
+      <!-- bash -->
+      <div class="script-panel hidden" id="panel-bash">
+        <div class="sp-label">// Not directly solvable in bash (no fast eval loop), but here's a start:</div>
+        <div class="sp-code">
+          <pre class="sp-pre"><span class="sc-comment">#!/usr/bin/env python3</span>
+<span class="sc-comment"># Why not bash? bash arithmetic (&lt;&lt;&lt;) is too slow for 100 rounds</span>
+<span class="sc-comment"># with a 3-second timeout per round. Use Python instead.</span>
+
+<span class="sc-comment"># One-liner tester (shows raw server output):</span>
+<span class="sc-comment"># nc challenge.flagvault.local 5555</span>
+
+<span class="sc-comment"># Example session:</span>
+<span class="sc-comment"># === Math Gauntlet ===  (server banner)</span>
+<span class="sc-comment"># Ready? GO!</span>
+<span class="sc-comment"># Round 1/100: 655 + 26 = ?   ← server sends this</span>
+<span class="sc-comment"># 681                          ← you must send this FAST</span>
+<span class="sc-comment"># Correct! [1/100]             ← server replies</span>
+<span class="sc-comment"># Round 2/100: 760 * 32 = ?</span>
+<span class="sc-comment"># ...</span>
+<span class="sc-comment"># Congratulations! Flag: FlagVault{...}</span></pre>
+        </div>
+        <div class="sp-run-row">
+          <code class="sp-runcmd">python3 solution_pwntools.py</code>
+          <span class="sp-note">use the Python tab instead</span>
+        </div>
+      </div>
+
+      <!-- Flag reveal -->
+      <div id="flag-reveal" class="flag-reveal hidden">
+        <div class="fr-glow"></div>
+        <div class="fr-icon">🧮</div>
+        <h2 class="fr-title">100/100 — Flag Captured!</h2>
+        <p class="fr-sub">The server only hands out flags to solvers — you need a script to beat the clock.</p>
+        <div class="fr-box">
+          <span class="fr-lbl">🚩 SERVER FLAG</span>
+          <code class="fr-val" id="fr-val"></code>
+          <button class="btn-copy-sm" onclick="copyFlag()">📋 Copy</button>
+          <div class="copy-toast hidden" id="copy-toast">✓ Copied!</div>
+        </div>
+        <div class="fr-proof">
+          <div class="fp-row"><span class="fp-k">Rounds</span><span class="fp-v fp-r">100 / 100 correct</span></div>
+          <div class="fp-row"><span class="fp-k">Technique</span><span class="fp-v fp-t">Automated socket script (pwntools / socket)</span></div>
+          <div class="fp-row"><span class="fp-k">Protocol</span><span class="fp-v fp-p">Plain TCP · readline → eval → sendline</span></div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ══════ RIGHT ══════ -->
+    <div class="mg-right">
+
+      <div class="sec-divider"><h3>Challenge Info</h3></div>
+      <div class="info-panel">
+        <div class="info-row"><span class="info-key">Host</span><code>challenge.flagvault.local</code></div>
+        <div class="info-row"><span class="info-key">Port</span><code>5555 / TCP</code></div>
+        <div class="info-row"><span class="info-key">Rounds</span><code>100</code></div>
+        <div class="info-row"><span class="info-key">Timeout</span><code>3 sec / round</code></div>
+        <div class="info-row"><span class="info-key">Category</span><span class="tag tag-green">Scripting</span></div>
+        <div class="info-row"><span class="info-key">Points</span><span style="color:var(--accent);font-family:var(--font-hud)">200</span></div>
+      </div>
+
+      <div class="sec-divider"><h3>Background</h3></div>
+      <div class="desc-block">
+        <p>The server presents 100 arithmetic problems. Each one must be answered within 3 seconds. At ~1 problem per second you'd need to type 100 answers in under 5 minutes — impossible by hand for random problems.</p>
+        <br/>
+        <p>The solution is to write a script that connects over TCP, reads each problem, evaluates the expression in code, and sends the answer automatically. This is the core skill behind interactive CTF pwnables.</p>
+      </div>
+
+      <!-- Protocol diagram -->
+      <div class="sec-divider"><h3>Protocol</h3></div>
+      <div class="proto-card">
+        <div class="pc-row pc-server">
+          <span class="pc-dir">← SERVER</span>
+          <code class="pc-msg">═══ Math Gauntlet ═══<br/>Solve 100 problems. 3s each.<br/>Ready? GO!</code>
+        </div>
+        <div class="pc-row pc-server">
+          <span class="pc-dir">← SERVER</span>
+          <code class="pc-msg">Round 1/100: 655 + 26 = ?</code>
+        </div>
+        <div class="pc-row pc-client">
+          <span class="pc-dir">→ CLIENT</span>
+          <code class="pc-msg">681</code>
+        </div>
+        <div class="pc-row pc-server">
+          <span class="pc-dir">← SERVER</span>
+          <code class="pc-msg">Correct! [1/100]</code>
+        </div>
+        <div class="pc-dots">… × 99 more rounds …</div>
+        <div class="pc-row pc-server pc-flag">
+          <span class="pc-dir">← SERVER</span>
+          <code class="pc-msg">🚩 Congratulations!<br/>Flag: FlagVault{…}</code>
+        </div>
+      </div>
+
+      <!-- Key insight -->
+      <div class="sec-divider"><h3>Key Insight</h3></div>
+      <div class="insight-card">
+        <div class="ic-row"><span class="ic-n">1</span><div class="ic-t">Open a TCP connection to the server</div></div>
+        <div class="ic-row"><span class="ic-n">2</span><div class="ic-t">Read lines until you see <code>"Ready? GO!"</code></div></div>
+        <div class="ic-row"><span class="ic-n">3</span><div class="ic-t">Loop 100×: read the problem line → parse the expression → <code>eval()</code> it → send the answer</div></div>
+        <div class="ic-row"><span class="ic-n">4</span><div class="ic-t">After round 100, read the remaining output — the flag is there</div></div>
+      </div>
+
+      <!-- Tools -->
+      <div class="sec-divider"><h3>Recommended Tools</h3></div>
+      <div class="tools-list">
+        <div class="tl-item tl-best">
+          <span class="tl-name">pwntools</span>
+          <span class="tl-desc">CTF scripting library — <code>remote()</code>, <code>recvline()</code>, <code>sendline()</code></span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-name">socket</span>
+          <span class="tl-desc">Python stdlib — works with zero extra installs</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-name">nc (manual)</span>
+          <span class="tl-desc">Good for exploring the server — can't solve 100 rounds by hand</span>
+        </div>
+      </div>
+
+      <!-- Hints -->
+      <div class="sec-divider"><h3>Hints</h3></div>
+      <div class="hints-list">
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(1)">
+            <span>💡 HINT 1</span>
+            <span class="hint-cost tag tag-green">−20 pts</span>
+            <span class="hint-toggle" id="h1t">▼ Reveal</span>
+          </div>
+          <div class="hint-body hidden" id="h1b">
+            First <code>nc challenge.flagvault.local 5555</code> manually to see the exact format. The problem line looks like: <code>Round X/100: A op B = ?</code>. Parse out the expression, evaluate it with Python's <code>eval()</code>, and send the integer back immediately.
+          </div>
+        </div>
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(2)">
+            <span>💡 HINT 2</span>
+            <span class="hint-cost tag tag-red">−40 pts</span>
+            <span class="hint-toggle" id="h2t">▼ Reveal</span>
+          </div>
+          <div class="hint-body hidden" id="h2b">
+            Parse the expression: <code>line.split(": ")[1].replace(" = ?", "")</code>. Then <code>int(eval(expr))</code> gives the answer. <code>//</code> is Python's integer floor division — <code>eval()</code> handles it natively. Send the answer as bytes: <code>io.sendline(str(ans).encode())</code>.
+          </div>
+        </div>
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(3)">
+            <span>💡 HINT 3</span>
+            <span class="hint-cost tag tag-purple">−60 pts</span>
+            <span class="hint-toggle" id="h3t">▼ Reveal</span>
+          </div>
+          <div class="hint-body hidden" id="h3b">
+            Copy the pwntools script from the "Script" tab on the left — it's the complete working solution. Install pwntools: <code>pip install pwntools</code>, then run: <code>python3 solution_pwntools.py</code>. The flag will be printed after round 100.
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="sec-divider"><h3>Submit Flag</h3></div>
+      <div class="flag-submit-panel">
+        <div class="form-group flag-input-wrap">
+          <span class="flag-prefix">FlagVault{</span>
+          <input class="form-control" id="flag-input" type="text"
+                 placeholder="your_flag_here" autocomplete="off"/>
+        </div>
+        <button class="btn btn-primary" onclick="submitFlag()" style="width:100%">
+          &gt;_ SUBMIT FLAG
+        </button>
+        <div class="submit-result" id="flag-result"></div>
+      </div>
+
+    </div><!-- /right -->
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-brand">FLAG<span>VAULT</span> CTF</div>
+  <div class="footer-copy">Challenge #P1 · Scripting · Math Gauntlet — 100 Rounds</div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
